@@ -20,27 +20,36 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false  # Avoids conflicts with GitHub Actions credentials
 
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Ensure develop is up to date
+        run: |
+          git fetch origin main
+          git checkout develop
+          git rebase origin/main || echo "No changes to rebase"
+
       - name: Commit changes (if any)
         run: |
           git add .
           git commit -m "Auto: Updates from develop" || echo "No changes to commit"
-      
+
       - name: Push changes
-        run: git push origin develop
+        run: git push origin develop --force-with-lease
 
       - name: Create Pull Request to Merge develop → main
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Auto: Merge develop into main"
           branch: develop
           base: main
-          title: "Auto PR: Merge develop into main"
+          title: "Auto PR: Merge develop → main"
           body: "This PR merges latest changes from develop into main."
           labels: "auto-pr"
           draft: false
