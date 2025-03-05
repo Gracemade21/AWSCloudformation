@@ -3,11 +3,11 @@
 on:
   push:
     branches:
-      - develop  # Trigger when pushing to develop
+      - develop
   pull_request:
     branches:
-      - main     # Trigger deployment when PR is merged to main
-  workflow_dispatch:  # Allow manual trigger
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,24 +15,26 @@ permissions:
 
 jobs:
   create-pull-request:
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4  # Use latest stable version
+        uses: actions/checkout@v4
 
       - name: Create Pull Request to Merge develop → main
         uses: peter-evans/create-pull-request@v5
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: develop
           base: main
           title: "Auto PR: Merge develop into main"
           body: "This PR merges latest changes from develop into main."
           labels: "auto-pr"
-          draft: false  # Change to true if you want a draft PR
+          draft: false
 
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
