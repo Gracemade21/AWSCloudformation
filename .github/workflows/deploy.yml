@@ -1,16 +1,26 @@
-﻿name: Deploy CloudFormation to AWS
+﻿name: Deploy and Delete CloudFormation Stack
 
 on:
   push:
     branches:
       - develop
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Choose an action (deploy or delete)'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - delete
 
 permissions:
   contents: write
 
 jobs:
   deploy:
+    if: github.event_name == 'push' || github.event.inputs.action == 'deploy'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -35,3 +45,23 @@ jobs:
         run: |
           aws cloudformation describe-stacks --stack-name EC2InstanceStack \
           --query "Stacks[0].Outputs" --output table
+
+  delete:
+    if: github.event.inputs.action == 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Delete CloudFormation Stack
+        run: |
+          aws cloudformation delete-stack --stack-name EC2InstanceStack --region ${{ secrets.AWS_REGION }}
+
+      - name: Wait for Stack Deletion
+        run: |
+          aws cloudformation wait stack-delete-complete --stack-name EC2InstanceStack --region ${{ secrets.AWS_REGION }}
+          echo "Stack deleted successfully."
