@@ -21,6 +21,19 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit changes (if any)
+        run: |
+          git add .
+          git commit -m "Auto: Updates from develop" || echo "No changes to commit"
+      
+      - name: Push changes
+        run: git push origin develop
+
       - name: Create Pull Request to Merge develop → main
         uses: peter-evans/create-pull-request@v5
         with:
