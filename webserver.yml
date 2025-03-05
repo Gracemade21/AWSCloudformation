@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy an EC2 Instance with a Security Group using CloudFormation
+
+Resources:
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-04b4f1a9cf54c11d0  # Replace with a valid Ubuntu AMI ID
+      KeyName: my-key-pair  # Replace with your key pair name
+      SecurityGroups:
+        - !Ref MySecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo apt-get update -y
+          sudo apt-get install -y apache2
+          sudo systemctl start apache2
+          sudo systemctl enable apache2
+
+          # Create the web page with HTML and CSS
+          cat <<EOF > /var/www/html/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Welcome to My EC2 Instance</title>
+              <style>
+                  body {
+                      font-family: Arial, sans-serif;
+                      text-align: center;
+                      background-color: #f4f4f4;
+                      margin: 0;
+                      padding: 50px;
+                  }
+                  .container {
+                      background: white;
+                      padding: 20px;
+                      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+                      border-radius: 10px;
+                      display: inline-block;
+                  }
+                  h1 {
+                      color: #333;
+                  }
+                  p {
+                      font-size: 18px;
+                  }
+                  .footer {
+                      margin-top: 20px;
+                      font-size: 14px;
+                      color: #555;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>Welcome to My CloudFormation EC2 Instance</h1>
+                  <p>This is a simple web page deployed using CloudFormation.</p>
+                  <p>Server Hostname: <b>$(hostname)</b></p>
+                  <div class="footer">Powered by Apache on Ubuntu</div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+          # Restart Apache to apply changes
+          sudo systemctl restart apache2
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and HTTP Access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0  # Change for better security
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0  # Allow HTTP access
+
+Outputs:
+  InstanceId:
+    Description: "EC2 Instance ID"
+    Value: !Ref MyEC2Instance
+  PublicIP:
+    Description: "Public IP of the EC2 Instance"
+    Value: !GetAtt MyEC2Instance.PublicIp
