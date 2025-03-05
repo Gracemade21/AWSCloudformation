@@ -1,0 +1,82 @@
+﻿name: Deploy CloudFormation to AWS
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pull-request:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false  # Avoids conflicts with GitHub Actions credentials
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure develop is up to date
+        run: |
+          git fetch origin main
+          git checkout develop
+          git rebase origin/main || echo "No changes to rebase"
+
+      - name: Commit changes (if any)
+        run: |
+          git add .
+          git commit -m "Auto: Updates from develop" || echo "No changes to commit"
+
+      - name: Push changes
+        run: git push origin develop --force-with-lease
+
+      - name: Create Pull Request to Merge develop → main
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Auto: Merge develop into main"
+          branch: develop
+          base: main
+          title: "Auto PR: Merge develop → main"
+          body: "This PR merges latest changes from develop into main."
+          labels: "auto-pr"
+          draft: false
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy CloudFormation Stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name EC2InstanceStack \
+            --template-file webserver.yml \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region ${{ secrets.AWS_REGION }}
+
+      - name: Get Stack Outputs
+        run: |
+          aws cloudformation describe-stacks --stack-name EC2InstanceStack \
+          --query "Stacks[0].Outputs" --output table
