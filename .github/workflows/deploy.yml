@@ -1,0 +1,54 @@
+﻿name: Deploy CloudFormation to AWS
+
+on:
+  push:
+    branches:
+      - develop  # Trigger when pushing to develop
+  pull_request:
+    branches:
+      - main     # Trigger deployment when PR is merged to main
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4  # Use latest stable version
+
+      - name: Create Pull Request to Merge develop → main
+        uses: peter-evans/create-pull-request@v5
+        with:
+          branch: develop
+          base: main
+          title: "Auto PR: Merge develop into main"
+          body: "This PR merges latest changes from develop into main."
+          labels: "auto-pr"
+          draft: false  # Change to true if you want a draft PR
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy CloudFormation Stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name EC2InstanceStack \
+            --template-file webserver.yml \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region ${{ secrets.AWS_REGION }}
+
+      - name: Get Stack Outputs
+        run: |
+          aws cloudformation describe-stacks --stack-name EC2InstanceStack \
+          --query "Stacks[0].Outputs" --output table
