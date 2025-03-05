@@ -9,6 +9,10 @@ on:
       - main     # Trigger deployment when PR is merged to main
   workflow_dispatch:  # Allow manual trigger
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   create-pull-request:
     runs-on: ubuntu-latest
