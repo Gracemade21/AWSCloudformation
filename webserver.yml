@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy an EC2 Instance with a Security Group using CloudFormation
+Description: Deploy an EC2 Instance with a Security Group using CloudFormation test
 
 Resources:
   MyEC2Instance:

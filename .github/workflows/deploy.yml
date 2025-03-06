@@ -36,7 +36,7 @@ jobs:
       - name: Deploy CloudFormation Stack
         run: |
           aws cloudformation deploy \
-            --stack-name EC2InstanceStack \
+            --stack-name EC2InstanceStack2 \
             --template-file webserver.yml \
             --capabilities CAPABILITY_NAMED_IAM \
             --region ${{ secrets.AWS_REGION }}
